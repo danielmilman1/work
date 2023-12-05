@@ -1,0 +1,49 @@
+---
+  - name: read admin pwd
+    shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+    register: adminpwd
+
+  - name: unlock and add admin user
+    jenkins_script:
+     script: |
+      import jenkins.model.*
+      import hudson.security.*
+      def instance = Jenkins.getInstance()
+      def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+      hudsonRealm.createAccount('${user_name}', '${user_pwd}')
+      instance.setSecurityRealm(hudsonRealm)
+      def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+      strategy.setAllowAnonymousRead(false)
+      instance.setAuthorizationStrategy(strategy)
+      instance.save()
+     args:
+      user_name: "{{ NEW_USER_NAME }}"
+      user_pwd: "{{ NEW_USER_PASS }}"
+     user: admin
+     password: "{{ adminpwd.stdout }}"
+
+  - name: complete setup wizard
+    jenkins_script:
+     script: |
+      import static jenkins.model.Jenkins.instance as jenkins
+      import jenkins.install.InstallState
+      if (!jenkins.installState.isSetupComplete()) {
+        InstallState.INITIAL_SETUP_COMPLETED.initializeState()
+      }
+     user: admin
+     password: "{{ adminpwd.stdout }}"
+
+
+  #- name: Install specific version of the plugin
+    #community.general.jenkins_plugin:
+      #name: artifactory
+      #version: "3.17.4"
+      # *** need to add CSRF certificate *** #
+
+  #- name: install plugin
+    #jenkins_plugin:
+     #name: "{{ item }}"
+     #state: latest
+     #url_username: admin
+     #url_password: "{{ adminpwd.stdout }}"
+#    with_items: "{{ jenkins_plugins }}"

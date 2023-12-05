@@ -1,0 +1,42 @@
+---
+    - name: Update APT package manager repositories cache
+      apt:
+        update_cache: yes
+
+    - name: Download jenkins repo key
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/
+
+    - name: Add source
+      shell: echo deb [signed-by=/usr/share/keyrings/jenkins.io-2023.key] \
+             https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+             /etc/apt/sources.list.d/jenkins.list > /dev/null
+    
+    - name: apt update
+      shell: sudo apt-get update
+
+    - name: Install Java
+      become: yes
+      apt:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+           - openjdk-11-jdk
+           - fontconfig
+
+    - name: set java veriables
+      shell: sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+
+    - name: Install Jenkins
+      become: yes
+      apt:
+        name: "jenkins"
+        state: present
+
+    #- name: Download artifactory plugin
+      #get_url:
+        #url: https://updates.jenkins.io/download/plugins/artifactory/3.17.4/artifactory.hpi
+        #dest: /var/lib/jenkins/plugins/
+        #mode: '0644'
